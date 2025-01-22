@@ -5,10 +5,7 @@
          '[clojure.java.io :as io]
          '[babashka.fs :as fs])
 
-(def URL "https://api.weather.gov/gridpoints/LWX/88,80/forecast")
-
 (def endpoints {:points "https://api.weather.gov/points/"})
-(def pgeocode-cache-path (str (fs/home) "/.cache/pgeocode/US.txt"))
 (def cache-path (str (fs/home) "/.cache/bb-scripts/geonames/"))
 
 (defn get-all
@@ -35,12 +32,9 @@
 (defn read-csv-to-maps
   ([] (read-csv-to-maps (get-geonames-data-path)))
   ([fname]
-   (let [csv-data (-> fname slurp csv/read-csv)]
-     (map zipmap
-          (->> (first csv-data)
-               (map keyword)
-               repeat)
-          (rest csv-data)))))
+   (let [csv-data (-> fname slurp (csv/read-csv :separator \tab))]
+     (map #(zipmap [:postal_code :place_name :state_code :latitude :longitude]
+            (->> (get-all % [1 2 4 9 10]) (map second))) csv-data))))
 
 (defn geocode [zipcode]
   (first (filter
