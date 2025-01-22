@@ -1,5 +1,6 @@
 #!/usr/bin/env bb
-(require '[babashka.http-client :as http]
+(require '[babashka.curl :as curl]
+         '[babashka.http-client :as http]
          '[babashka.process :refer [shell process alive?]]
          '[clojure.java.io :as io]
          '[babashka.fs :as fs])
@@ -8,14 +9,31 @@
 
 (def endpoints {:points "https://api.weather.gov/points/"})
 (def pgeocode-cache-path (str (fs/home) "/.cache/pgeocode/US.txt"))
+(def cache-path (str (fs/home) "/.cache/bb-scripts/geonames/"))
 
 (defn get-all
   [coll keyset]
   (for [k keyset]
     (vector k (get coll k))))
 
+(defn download-geonames-data [cache-path country]
+  (let [base-url "http://download.geonames.org/export/zip/"
+        url (str base-url country ".zip")
+        response (curl/get url {:as :bytes})]
+    (if (= (:status response) 200)
+      (do (-> response :body io/input-stream (fs/unzip cache-path))
+          (str cache-path country ".txt"))
+      (throw (Exception. str "Wrong HTTP Response Code: " (:status response))))))
+
+(defn get-geonames-data-path
+  ([] (get-geonames-data-path cache-path "US"))
+  ([cache-path country]
+   (let [file-path (str cache-path country ".txt")]
+     (if (fs/exists? file-path) file-path
+         (download-geonames-data cache-path country)))))
+
 (defn read-csv-to-maps
-  ([] (read-csv-to-maps pgeocode-cache-path))
+  ([] (read-csv-to-maps (get-geonames-data-path)))
   ([fname]
    (let [csv-data (-> fname slurp csv/read-csv)]
      (map zipmap
