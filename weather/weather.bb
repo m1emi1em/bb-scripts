@@ -5,7 +5,7 @@
          '[clojure.java.io :as io]
          '[babashka.fs :as fs])
 
-(def endpoints {:points "https://api.weather.gov/points/"})
+(def api-endpoint "https://api.weather.gov/points/")
 (def cache-path (str (fs/home) "/.cache/bb-scripts/geonames/"))
 
 (defn get-all
@@ -54,7 +54,7 @@
 (defn get-forecast-url
   "Gets the endpoint url for the requested latitude and longitude using a points request"
   [{latitude :latitude longitude :longitude}]
-  (-> (format "%s%s,%s" (:points endpoints) latitude longitude)
+  (-> (format "%s%s,%s" api-endpoint latitude longitude)
       api-get
       (get-in ["properties" "forecastHourly"])))
 
