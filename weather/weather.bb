@@ -41,28 +41,13 @@
           (fn [{zc :postal_code}] (= zc zipcode))
           (read-csv-to-maps))))
 
-(defn api-get
-  "Make an HTTP GET to url and return the json result"
-  [url]
-  (let [response (-> url http/get)]
-    (if (= (:status response) 500)
-      (do
-        (print "Server responded with 500. Rate limit (probably) exceeded. Wait a bit then try again")
-        (System/exit 1))
-      (-> response :body json/parse-string))))
-
-(defn get-forecast-url
-  "Gets the endpoint url for the requested latitude and longitude using a points request"
-  [{latitude :latitude longitude :longitude}]
-  (-> (format "%s%s,%s" api-endpoint latitude longitude)
-      api-get
-      (get-in ["properties" "forecastHourly"])))
-
-(defn get-forecast [location]
-  (-> location get-forecast-url api-get
-      (get-in ["properties" "periods"])
-      first
-      (get-all ["temperature" "shortForecast"])))
+(defn get->data [url get-fn pre-fn]
+  (let [response (get-fn url)
+         http-code (:status response)]
+     (condp = http-code
+       200 (-> response :body pre-fn)
+       500 (throw (Exception. "Server responded with 500. Rate limit (probably) exceeded. Wait a bit then try again"))
+       (throw (Exception. (str "Unexpected HTTP status " http-code))))))
 
 (defn check-rc []
   (let [path (str (fs/home) "/.weatherrc")]
@@ -79,9 +64,18 @@
     (println line)))
 
 (defn get-weather [postal-code]
-  (let [location (geocode postal-code)
-        forecast (get-forecast location)]
-    (display-results location forecast)))
+  (let [{latitude :latitude longitude :longitude :as location} (geocode postal-code)]
+    (-> (format "%s%s,%s" api-endpoint latitude longitude)
+        
+        (get->data curl/get json/parse-string)
+        (get-in ["properties" "forecastHourly"])
+        
+        (get->data curl/get json/parse-string)
+        (get-in ["properties" "periods"])
+        first
+        (get-all ["temperature" "shortForecast"])
+
+        (#(display-results location %)))))
 
 (defn -main
   ([]
