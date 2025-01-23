@@ -19,6 +19,8 @@
        500 (throw (Exception. "Server responded with 500. Rate limit (probably) exceeded. Wait a bit then try again"))
        (throw (Exception. (str "Unexpected HTTP status " http-code))))))
 
+(defn get->json [url] (get->data url curl/get json/parse-string))
+
 (defn download-geonames-data [cache-path country]
   (do (-> "http://download.geonames.org/export/zip/" 
           (str country ".zip")
@@ -44,8 +46,6 @@
   (first (filter
           (fn [{zc :postal_code}] (= zc zipcode))
           (read-csv-to-maps))))
-
-(defn get->json [url] (get->data url curl/get json/parse-string))
 
 (defn check-rc []
   (let [path (str (fs/home) "/.weatherrc")]
