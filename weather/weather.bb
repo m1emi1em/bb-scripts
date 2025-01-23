@@ -51,15 +51,10 @@
         (System/exit 1))
       (-> response :body json/parse-string))))
 
-(defn form-request
-  "Forms a request url"
-  [request-type & args]
-  (apply str (request-type endpoints) (interpose "," args)))
-
 (defn get-forecast-url
   "Gets the endpoint url for the requested latitude and longitude using a points request"
   [{latitude :latitude longitude :longitude}]
-  (-> (form-request :points latitude longitude)
+  (-> (format "%s%s,%s" (:points endpoints) latitude longitude)
       api-get
       (get-in ["properties" "forecastHourly"])))
 
