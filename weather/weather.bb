@@ -39,13 +39,13 @@
   ([] (read-csv-to-maps (get-geonames-data-path)))
   ([fname]
    (let [csv-data (-> fname slurp (csv/read-csv :separator \tab))]
-     (map #(zipmap [:postal_code :place_name :state_code :latitude :longitude]
-            (->> (get-all % [1 2 4 9 10]) (map second))) csv-data))))
+     (->> csv-data
+          (map #(zipmap [:postal_code :place_name :state_code :latitude :longitude]
+                        (->> (get-all % [1 2 4 9 10]) (map second))))
+          (map #(->> % ((juxt :postal_code identity)) (apply hash-map)))
+          (into {})))))
 
-(defn geocode [zipcode]
-  (first (filter
-          (fn [{zc :postal_code}] (= zc zipcode))
-          (read-csv-to-maps))))
+(defn geocode [zipcode] (-> (read-csv-to-maps) (get zipcode)))
 
 (defn check-rc []
   (let [path (str (fs/home) "/.weatherrc")]
