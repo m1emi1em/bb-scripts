@@ -48,6 +48,8 @@
        500 (throw (Exception. "Server responded with 500. Rate limit (probably) exceeded. Wait a bit then try again"))
        (throw (Exception. (str "Unexpected HTTP status " http-code))))))
 
+(defn get->json [url] (get->data url curl/get json/parse-string))
+
 (defn check-rc []
   (let [path (str (fs/home) "/.weatherrc")]
     (when (fs/exists? path)
@@ -66,10 +68,10 @@
   (let [{latitude :latitude longitude :longitude :as location} (geocode postal-code)]
     (-> (format "%s%s,%s" api-endpoint latitude longitude)
         
-        (get->data curl/get json/parse-string)
+        get->json
         (get-in ["properties" "forecastHourly"])
         
-        (get->data curl/get json/parse-string)
+        get->json
         (get-in ["properties" "periods"])
         first
         (get-all ["temperature" "shortForecast"])
