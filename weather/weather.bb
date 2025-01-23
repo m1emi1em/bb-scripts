@@ -12,14 +12,19 @@
   (for [k keyset]
     (vector k (get coll k))))
 
+(defn get->data [url get-fn pre-fn]
+  (let [response (get-fn url)
+         http-code (:status response)]
+     (condp = http-code
+       200 (-> response :body pre-fn)
+       500 (throw (Exception. "Server responded with 500. Rate limit (probably) exceeded. Wait a bit then try again"))
+       (throw (Exception. (str "Unexpected HTTP status " http-code))))))
+
 (defn download-geonames-data [cache-path country]
-  (let [base-url "http://download.geonames.org/export/zip/"
-        url (str base-url country ".zip")
-        response (curl/get url {:as :bytes})]
-    (if (= (:status response) 200)
-      (do (-> response :body io/input-stream (fs/unzip cache-path))
-          (str cache-path country ".txt"))
-      (throw (Exception. str "Wrong HTTP Response Code: " (:status response))))))
+  (-> "http://download.geonames.org/export/zip/" 
+      (str country ".zip")
+      (get->data #(curl/get % {:as :bytes}) io/input-stream)
+      (fs/unzip cache-path)))
 
 (defn get-geonames-data-path
   ([] (get-geonames-data-path cache-path "US"))
@@ -39,14 +44,6 @@
   (first (filter
           (fn [{zc :postal_code}] (= zc zipcode))
           (read-csv-to-maps))))
-
-(defn get->data [url get-fn pre-fn]
-  (let [response (get-fn url)
-         http-code (:status response)]
-     (condp = http-code
-       200 (-> response :body pre-fn)
-       500 (throw (Exception. "Server responded with 500. Rate limit (probably) exceeded. Wait a bit then try again"))
-       (throw (Exception. (str "Unexpected HTTP status " http-code))))))
 
 (defn get->json [url] (get->data url curl/get json/parse-string))
 
