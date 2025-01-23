@@ -53,13 +53,10 @@
       (-> path slurp str/trim-newline))))
 
 (defn display-results
-  [{city :place_name state :state_code}
-   [[_ temperature] [_ forecast]]]
-  (doseq [line [""
-                (str "The weather in " city ", " state " is:")
-                (str temperature " F")
-                (str "Forecast: " forecast)]]
-    (println line)))
+  [[[_ temperature] [_ forecast]]
+   {city :place_name state :state_code}]
+  (print (format "\nThe weather in %s, %s is:\n%d F\nForecast: %s\n"
+                 city state temperature forecast)))
 
 (defn get-weather [postal-code]
   (let [{latitude :latitude longitude :longitude :as location} (geocode postal-code)]
@@ -73,7 +70,7 @@
         first
         (get-all ["temperature" "shortForecast"])
 
-        (#(display-results location %)))))
+        (display-results location))))
 
 (defn -main
   ([]
