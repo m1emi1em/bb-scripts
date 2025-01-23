@@ -1,6 +1,5 @@
 #!/usr/bin/env bb
 (require '[babashka.curl :as curl]
-         '[babashka.http-client :as http]
          '[clojure.java.io :as io]
          '[babashka.fs :as fs])
 
