@@ -21,10 +21,11 @@
        (throw (Exception. (str "Unexpected HTTP status " http-code))))))
 
 (defn download-geonames-data [cache-path country]
-  (-> "http://download.geonames.org/export/zip/" 
-      (str country ".zip")
-      (get->data #(curl/get % {:as :bytes}) io/input-stream)
-      (fs/unzip cache-path)))
+  (do (-> "http://download.geonames.org/export/zip/" 
+          (str country ".zip")
+          (get->data #(curl/get % {:as :bytes}) io/input-stream)
+          (fs/unzip cache-path))
+      (str cache-path country ".txt")))
 
 (defn get-geonames-data-path
   ([] (get-geonames-data-path cache-path "US"))
